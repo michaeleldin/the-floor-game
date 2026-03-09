@@ -159,9 +159,10 @@ const Board = (() => {
     function startDuel(challengerIdx, defenderIdx) {
         const challengerOwner = state.tiles[challengerIdx].ownerIndex;
         const defenderOwner = state.tiles[defenderIdx].ownerIndex;
-        const categoryIdx = state.tiles[defenderIdx].categoryIndex;
+        const defenderCatIdx = state.tiles[defenderIdx].categoryIndex;
+        const challengerCatIdx = state.tiles[challengerIdx].categoryIndex;
 
-        Duel.setup(challengerOwner, defenderOwner, categoryIdx, challengerIdx, defenderIdx);
+        Duel.setup(challengerOwner, defenderOwner, defenderCatIdx, challengerCatIdx, challengerIdx, defenderIdx);
         App.navigate('duel');
     }
 
@@ -169,8 +170,9 @@ const Board = (() => {
      * Called by Duel when a duel ends.
      * winnerPlayerIndex: index in state.players
      * loserPlayerIndex: index in state.players
+     * challengerCatIndex: the challenger's category — winner inherits this
      */
-    function applyDuelResult(winnerPlayerIndex, loserPlayerIndex) {
+    function applyDuelResult(winnerPlayerIndex, loserPlayerIndex, challengerCatIndex) {
         state = Storage.load();
         if (!state) return;
 
@@ -178,6 +180,14 @@ const Board = (() => {
         state.tiles.forEach(tile => {
             if (tile.ownerIndex === loserPlayerIndex) {
                 tile.ownerIndex = winnerPlayerIndex;
+            }
+        });
+
+        // Winner inherits the challenger's category on ALL their tiles
+        // (the defender's category was consumed in the duel)
+        state.tiles.forEach(tile => {
+            if (tile.ownerIndex === winnerPlayerIndex) {
+                tile.categoryIndex = challengerCatIndex;
             }
         });
 

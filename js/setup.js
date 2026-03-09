@@ -40,6 +40,12 @@ const Setup = (() => {
         tbody.innerHTML = '';
         categoryImages = new Array(n).fill(null).map(() => []);
 
+        // Build preset <option> list once
+        const presetNames = Presets.getNames();
+        const presetOptions = presetNames.map((name, i) =>
+            `<option value="${i}">${name}</option>`
+        ).join('');
+
         for (let i = 0; i < n; i++) {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -47,6 +53,12 @@ const Setup = (() => {
                 <td><input type="text" class="player-name" placeholder="Player ${i + 1}" data-idx="${i}"></td>
                 <td><input type="color" class="player-color" value="${Utils.DEFAULT_COLORS[i]}" data-idx="${i}"></td>
                 <td><input type="text" class="player-category" placeholder="Category" data-idx="${i}"></td>
+                <td>
+                    <select class="preset-select" data-idx="${i}">
+                        <option value="">— None —</option>
+                        ${presetOptions}
+                    </select>
+                </td>
                 <td>
                     <label class="btn-upload-images" data-idx="${i}">
                         📁 Upload
@@ -65,6 +77,58 @@ const Setup = (() => {
         document.querySelectorAll('.image-upload').forEach(input => {
             input.addEventListener('change', onImagesSelected);
         });
+
+        // Bind preset select events
+        document.querySelectorAll('.preset-select').forEach(select => {
+            select.addEventListener('change', onPresetSelected);
+        });
+    }
+
+    /** Handle preset category selection */
+    function onPresetSelected(e) {
+        const idx = parseInt(e.target.dataset.idx, 10);
+        const presetIdx = e.target.value;
+
+        if (presetIdx === '') {
+            // "None" selected — clear images and category name
+            categoryImages[idx] = [];
+            updateImagePreview(idx);
+            return;
+        }
+
+        const preset = Presets.getByIndex(parseInt(presetIdx, 10));
+        if (!preset) return;
+
+        // Auto-fill category name
+        const catInput = document.querySelectorAll('.player-category')[idx];
+        if (catInput) catInput.value = preset.name;
+
+        // Load preset images
+        categoryImages[idx] = [...preset.images];
+        updateImagePreview(idx);
+    }
+
+    /** Update the image count and preview thumbnails for a row */
+    function updateImagePreview(idx) {
+        const countEl = document.getElementById(`img-count-${idx}`);
+        const previewEl = document.getElementById(`img-preview-${idx}`);
+        const images = categoryImages[idx];
+
+        countEl.textContent = `${images.length} image${images.length !== 1 ? 's' : ''}`;
+
+        previewEl.innerHTML = '';
+        images.slice(0, 5).forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.className = 'image-preview-thumb';
+            previewEl.appendChild(img);
+        });
+        if (images.length > 5) {
+            const more = document.createElement('span');
+            more.className = 'image-count';
+            more.textContent = `+${images.length - 5}`;
+            previewEl.appendChild(more);
+        }
     }
 
     /** Handle image file selection */
@@ -73,32 +137,15 @@ const Setup = (() => {
         const files = Array.from(e.target.files);
         if (!files.length) return;
 
-        const countEl = document.getElementById(`img-count-${idx}`);
-        const previewEl = document.getElementById(`img-preview-${idx}`);
-
-        countEl.textContent = 'Loading...';
+        document.getElementById(`img-count-${idx}`).textContent = 'Loading...';
 
         try {
             const newImages = await Promise.all(files.map(f => Utils.readImageFile(f)));
             categoryImages[idx] = categoryImages[idx].concat(newImages);
-            countEl.textContent = `${categoryImages[idx].length} image${categoryImages[idx].length !== 1 ? 's' : ''}`;
-
-            // Update preview thumbnails (show max 5)
-            previewEl.innerHTML = '';
-            categoryImages[idx].slice(0, 5).forEach(src => {
-                const img = document.createElement('img');
-                img.src = src;
-                img.className = 'image-preview-thumb';
-                previewEl.appendChild(img);
-            });
-            if (categoryImages[idx].length > 5) {
-                const more = document.createElement('span');
-                more.className = 'image-count';
-                more.textContent = `+${categoryImages[idx].length - 5}`;
-                previewEl.appendChild(more);
-            }
+            updateImagePreview(idx);
         } catch (err) {
             console.error('Image load error', err);
+            const countEl = document.getElementById(`img-count-${idx}`);
             countEl.textContent = 'Error';
         }
 

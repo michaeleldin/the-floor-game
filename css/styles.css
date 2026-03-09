@@ -361,6 +361,25 @@ img {
     padding: 2px;
 }
 
+#players-table select.preset-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: border var(--transition);
+    min-width: 120px;
+}
+
+#players-table select.preset-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
 #players-table input[type="file"] {
     display: none;
 }
@@ -1057,8 +1076,8 @@ img {
         padding: 12px 20px;
     }
 
-    #players-table th:nth-child(6),
-    #players-table td:nth-child(6) {
+    #players-table th:nth-child(7),
+    #players-table td:nth-child(7) {
         display: none; /* hide preview column on mobile */
     }
 

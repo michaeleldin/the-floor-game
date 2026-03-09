@@ -14,21 +14,26 @@ const Duel = (() => {
      * Setup a duel. Called by Board before navigating to duel view.
      * @param {number} p1Index  – challenger player index
      * @param {number} p2Index  – defender player index
-     * @param {number} catIndex – category index (defender's category)
+     * @param {number} defenderCatIndex – category index (defender's category, used for duel)
+     * @param {number} challengerCatIndex – category index (challenger's category, inherited by winner)
      * @param {number} challengerTile – tile index of challenger
      * @param {number} defenderTile – tile index of defender
      */
-    function setup(p1Index, p2Index, catIndex, challengerTile, defenderTile) {
+    function setup(p1Index, p2Index, defenderCatIndex, challengerCatIndex, challengerTile, defenderTile) {
         const state = Storage.load();
 
-        const category = state.categories[catIndex];
+        const category = state.categories[defenderCatIndex];
         const images = Utils.shuffle([...category.images]); // copy & shuffle
 
         duelData = {
             p1: { index: p1Index, name: state.players[p1Index].name, color: state.players[p1Index].color, time: TURN_TIME, score: 0 },
             p2: { index: p2Index, name: state.players[p2Index].name, color: state.players[p2Index].color, time: TURN_TIME, score: 0 },
             categoryName: category.name,
-            imageQueue: [...images],
+            challengerCatIndex: challengerCatIndex,
+            // Image tracking: index-based to avoid repetition bugs
+            images: images,              // all images (shuffled)
+            answeredSet: new Set(),      // indices of correctly answered images
+            currentImageIdx: 0,          // pointer into images array
             currentTurn: 1, // 1 or 2
             running: false,
             finished: false,
@@ -136,24 +141,41 @@ const Duel = (() => {
         return duelData.currentTurn === 1 ? duelData.p2 : duelData.p1;
     }
 
-    /** Show current image from the queue */
+    /** Get the number of unanswered images remaining */
+    function imagesRemaining() {
+        return duelData.images.length - duelData.answeredSet.size;
+    }
+
+    /** Advance currentImageIdx to the next unanswered image. Returns false if all answered. */
+    function advanceToNextUnanswered() {
+        if (duelData.answeredSet.size >= duelData.images.length) return false;
+        const total = duelData.images.length;
+        let attempts = 0;
+        do {
+            duelData.currentImageIdx = (duelData.currentImageIdx + 1) % total;
+            attempts++;
+        } while (duelData.answeredSet.has(duelData.currentImageIdx) && attempts <= total);
+        return attempts <= total;
+    }
+
+    /** Show current image */
     function showCurrentImage() {
         const imgEl = document.getElementById('duel-current-image');
         const placeholder = document.getElementById('duel-image-placeholder');
 
-        if (duelData.imageQueue.length === 0) {
-            // No more images — end duel, most time remaining wins
+        if (imagesRemaining() === 0) {
+            // All images answered — end duel, most time remaining wins
             duelData.running = false;
             endDuel('images_exhausted');
             return;
         }
 
-        const src = duelData.imageQueue[0];
+        const src = duelData.images[duelData.currentImageIdx];
         imgEl.src = src;
         imgEl.classList.add('visible');
         placeholder.style.display = 'none';
 
-        document.getElementById('duel-images-left').textContent = `Images left: ${duelData.imageQueue.length}`;
+        document.getElementById('duel-images-left').textContent = `Images left: ${imagesRemaining()}`;
     }
 
     /** Update the heads-up display */
@@ -193,13 +215,13 @@ const Duel = (() => {
 
     /** Host clicks "Correct" */
     function onCorrect() {
-        if (!duelData.running) return;
+        if (!duelData || !duelData.running) return;
 
         const current = currentPlayer();
         current.score++;
 
-        // Remove the answered image from queue
-        duelData.imageQueue.shift();
+        // Mark current image as answered
+        duelData.answeredSet.add(duelData.currentImageIdx);
 
         // Switch turns
         duelData.currentTurn = duelData.currentTurn === 1 ? 2 : 1;
@@ -207,19 +229,21 @@ const Duel = (() => {
         // Update timestamp to avoid counting pause
         lastTimestamp = performance.now();
 
-        if (duelData.imageQueue.length === 0) {
+        if (imagesRemaining() === 0) {
             duelData.running = false;
             endDuel('images_exhausted');
             return;
         }
 
+        // Advance to next unanswered image
+        advanceToNextUnanswered();
         showCurrentImage();
         updateHUD();
     }
 
     /** Host clicks "Skip" */
     function onSkip() {
-        if (!duelData.running) return;
+        if (!duelData || !duelData.running) return;
 
         const current = currentPlayer();
         current.time -= SKIP_PENALTY;
@@ -234,10 +258,8 @@ const Duel = (() => {
         // Reset timestamp to avoid counting processing time
         lastTimestamp = performance.now();
 
-        // Move current image to end of queue
-        const skipped = duelData.imageQueue.shift();
-        duelData.imageQueue.push(skipped);
-
+        // Skip to next unanswered image (current stays unanswered, will cycle back)
+        advanceToNextUnanswered();
         showCurrentImage();
         updateHUD();
     }
@@ -272,7 +294,9 @@ const Duel = (() => {
                 winner = duelData.p1;
                 loser = duelData.p2;
             }
-            reasonText = `All images answered! ${winner.name} had more time remaining.`;
+            reasonText = winner === duelData.p1 && duelData.p1.time === duelData.p2.time
+                ? `All images answered! Tie — ${winner.name} wins as challenger.`
+                : `All images answered! ${winner.name} had more time remaining.`;
         }
 
         renderResult(winner, loser, reasonText);
@@ -302,9 +326,9 @@ const Duel = (() => {
 
         document.getElementById('duel-result-reason').textContent = reasonText;
 
-        // Conquer button
+        // Conquer button — winner inherits the challenger's category
         document.getElementById('btn-conquer').onclick = () => {
-            Board.applyDuelResult(winner.index, loser.index);
+            Board.applyDuelResult(winner.index, loser.index, duelData.challengerCatIndex);
             App.navigate('board');
         };
     }
