@@ -28,9 +28,7 @@ const Duel = (() => {
             p1: { index: p1Index, name: state.players[p1Index].name, color: state.players[p1Index].color, time: TURN_TIME, score: 0 },
             p2: { index: p2Index, name: state.players[p2Index].name, color: state.players[p2Index].color, time: TURN_TIME, score: 0 },
             categoryName: category.name,
-            images: images,
             imageQueue: [...images],
-            currentImageIdx: 0,
             currentTurn: 1, // 1 or 2
             running: false,
             finished: false,
@@ -232,6 +230,9 @@ const Duel = (() => {
             endDuel('timeout');
             return;
         }
+
+        // Reset timestamp to avoid counting processing time
+        lastTimestamp = performance.now();
 
         // Move current image to end of queue
         const skipped = duelData.imageQueue.shift();
