@@ -273,7 +273,16 @@ const Duel = (() => {
         // Reset timestamp to avoid counting processing time
         lastTimestamp = performance.now();
 
-        // Skip to next unanswered image (current stays unanswered, will cycle back)
+        // Consume the current image (skipped images are removed from the pool, like Correct)
+        duelData.answeredSet.add(duelData.currentImageIdx);
+
+        if (imagesRemaining() === 0) {
+            duelData.running = false;
+            endDuel('images_exhausted');
+            return;
+        }
+
+        // Move to the next remaining image (same player's turn continues)
         advanceToNextUnanswered();
         showCurrentImage();
         updateHUD();
