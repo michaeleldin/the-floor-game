@@ -92,6 +92,8 @@ const Setup = (() => {
         if (presetIdx === '') {
             // "None" selected — clear images and category name
             categoryImages[idx] = [];
+            const catInput = document.querySelectorAll('.player-category')[idx];
+            if (catInput) catInput.value = '';
             updateImagePreview(idx);
             return;
         }

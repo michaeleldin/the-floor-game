@@ -37,6 +37,9 @@ const Board = (() => {
             div.className = 'grid-tile';
             div.dataset.index = idx;
             div.style.backgroundColor = player.color;
+            div.tabIndex = 0;
+            div.setAttribute('role', 'button');
+            div.setAttribute('aria-label', `${player.name} — ${category.name}`);
 
             div.innerHTML = `
                 <span class="tile-player-name">${escapeHtml(player.name)}</span>
@@ -45,6 +48,12 @@ const Board = (() => {
             `;
 
             div.addEventListener('click', () => onTileClick(idx));
+            div.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onTileClick(idx);
+                }
+            });
             grid.appendChild(div);
         });
 
@@ -62,7 +71,8 @@ const Board = (() => {
 
     /** Handle tile click */
     function onTileClick(idx) {
-        state = Storage.load();
+        // Reuse the state already loaded by render(); it only changes after a duel,
+        // which re-renders the board. Avoids re-parsing the image-heavy blob on every click.
         if (!state) return;
 
         const tile = state.tiles[idx];

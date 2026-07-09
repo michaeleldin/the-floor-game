@@ -82,7 +82,7 @@ const Utils = (() => {
         if (seconds < 0) seconds = 0;
         const s = Math.floor(seconds);
         const tenths = Math.floor((seconds - s) * 10);
-        const mm = String(Math.floor(s / 60)).padStart(1, '0');
+        const mm = String(Math.floor(s / 60));
         const ss = String(s % 60).padStart(2, '0');
         return `${mm}:${ss}.${tenths}`;
     }

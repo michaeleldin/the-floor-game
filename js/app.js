@@ -120,7 +120,8 @@ const App = (() => {
 
         // Stats
         document.getElementById('victory-duels').textContent = state.duelsPlayed;
-        document.getElementById('victory-tiles').textContent = state.gridSize;
+        // Winner started with 1 tile and took the rest by conquest
+        document.getElementById('victory-tiles').textContent = Math.max(0, state.gridSize - 1);
 
         // Trigger confetti
         launchConfetti();

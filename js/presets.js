@@ -20,6 +20,11 @@
 
 const Presets = (() => {
 
+    // ─── Helper: UTF-8 safe base64 encode (replaces deprecated unescape) ───
+    function toBase64(str) {
+        return btoa(String.fromCharCode(...new TextEncoder().encode(str)));
+    }
+
     // ─── Helper: Generate an SVG data URI with a colored background and text ───
     function svgCard(bgColor, text, textColor = '#fff', fontSize = 72) {
         const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400">
@@ -27,7 +32,7 @@ const Presets = (() => {
             <text x="200" y="220" text-anchor="middle" font-family="Arial,sans-serif"
                   font-size="${fontSize}" font-weight="bold" fill="${textColor}">${text}</text>
         </svg>`;
-        return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        return 'data:image/svg+xml;base64,' + toBase64(svg);
     }
 
     // ─── Helper: Generate flag-like SVG (3 horizontal stripes) ───
@@ -40,7 +45,7 @@ const Presets = (() => {
             <text x="200" y="360" text-anchor="middle" font-family="Arial,sans-serif"
                   font-size="28" fill="#888">?</text>
         </svg>`;
-        return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        return 'data:image/svg+xml;base64,' + toBase64(svg);
     }
 
     // ─── Helper: Generate vertical stripe flag SVG ───
@@ -53,7 +58,7 @@ const Presets = (() => {
             <text x="200" y="370" text-anchor="middle" font-family="Arial,sans-serif"
                   font-size="28" fill="#888">?</text>
         </svg>`;
-        return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        return 'data:image/svg+xml;base64,' + toBase64(svg);
     }
 
     // ─── Define Categories ───

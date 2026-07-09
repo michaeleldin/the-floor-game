@@ -9,6 +9,7 @@ const Duel = (() => {
     let duelData = null;        // current duel context
     let timerInterval = null;
     let lastTimestamp = null;
+    let visibilityBound = false; // ensure the visibility listener is added once
 
     /**
      * Setup a duel. Called by Board before navigating to duel view.
@@ -97,7 +98,19 @@ const Duel = (() => {
 
         showCurrentImage();
         updateHUD();
+        bindVisibility();
         startTimer();
+    }
+
+    /** Pause the clock while the tab is hidden so a player doesn't lose time in the background */
+    function bindVisibility() {
+        if (visibilityBound) return;
+        visibilityBound = true;
+        document.addEventListener('visibilitychange', () => {
+            if (!duelData || duelData.finished) return;
+            // Reset the timestamp on return so the hidden interval doesn't drain the clock at once
+            lastTimestamp = performance.now();
+        });
     }
 
     /** Start the countdown timer using requestAnimationFrame-style interval */
@@ -106,10 +119,12 @@ const Duel = (() => {
         lastTimestamp = performance.now();
         timerInterval = setInterval(() => {
             const now = performance.now();
-            const delta = (now - lastTimestamp) / 1000;
+            // Clamp the delta so a throttled/backgrounded tab can't zero a clock in one tick
+            let delta = (now - lastTimestamp) / 1000;
+            if (delta > 0.25) delta = 0.25;
             lastTimestamp = now;
 
-            if (!duelData.running) return;
+            if (!duelData.running || document.hidden) return;
 
             const current = currentPlayer();
             current.time -= delta;

@@ -76,6 +76,7 @@ the-floor-game/
 │   ├── setup.js        # Setup screen (players, categories, images)
 │   ├── board.js        # Game board grid & duel initiation
 │   ├── duel.js         # Duel engine (timer, images, scoring)
+│   ├── presets.js      # Built-in preset categories
 │   ├── storage.js      # localStorage helpers
 │   └── utils.js        # Shared utilities
 └── README.md
