@@ -179,7 +179,7 @@ const Setup = (() => {
             if (!category) errors.push(`Player ${i + 1}: Category is required.`);
             if (images.length < 3) errors.push(`Player ${i + 1} (${name || '?'}): At least 3 images required (has ${images.length}).`);
 
-            players.push({ name: name || `Player ${i + 1}`, color, alive: true });
+            players.push({ name: name || `Player ${i + 1}`, color, alive: true, played: false });
             categories.push({ name: category || `Category ${i + 1}`, images });
         }
 

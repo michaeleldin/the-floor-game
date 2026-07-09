@@ -65,6 +65,10 @@ const Board = (() => {
         // Reset instruction
         updateInstruction('Click a tile to select a <strong>challenger</strong>, then click an adjacent tile to start a duel.');
 
+        // Random challenger button
+        const randomBtn = document.getElementById('btn-random-challenger');
+        if (randomBtn) randomBtn.onclick = randomSelectChallenger;
+
         // Check for victory
         checkVictory();
     }
@@ -204,6 +208,9 @@ const Board = (() => {
         // Mark loser as eliminated
         state.players[loserPlayerIndex].alive = false;
 
+        // Mark the winner as having played (used to prioritize fresh players in random pick)
+        if (state.players[winnerPlayerIndex]) state.players[winnerPlayerIndex].played = true;
+
         // Increment duel counter
         state.duelsPlayed++;
 
@@ -227,6 +234,54 @@ const Board = (() => {
                 App.navigate('victory');
             }, 600);
         }
+    }
+
+    /** True if the tile at idx has at least one adjacent tile owned by a different player */
+    function tileHasAdjacentOpponent(idx) {
+        const owner = state.tiles[idx].ownerIndex;
+        return state.tiles.some((t, i) =>
+            Utils.areAdjacent(i, idx, state.cols) && t.ownerIndex !== owner
+        );
+    }
+
+    /**
+     * Randomly select a challenger tile.
+     * Only considers active players who have a valid (adjacent) opponent to duel,
+     * and prioritizes players who haven't dueled yet.
+     */
+    function randomSelectChallenger() {
+        state = Storage.load();
+        if (!state || state.gameOver) return;
+
+        // Group each active player's tiles that have an adjacent opponent
+        const tilesByPlayer = new Map();
+        state.tiles.forEach((tile, idx) => {
+            if (!state.players[tile.ownerIndex].alive) return;
+            if (!tileHasAdjacentOpponent(idx)) return;
+            if (!tilesByPlayer.has(tile.ownerIndex)) tilesByPlayer.set(tile.ownerIndex, []);
+            tilesByPlayer.get(tile.ownerIndex).push(idx);
+        });
+
+        const candidatePlayers = [...tilesByPlayer.keys()];
+        if (candidatePlayers.length === 0) {
+            updateInstruction('⚠ No challenger has an adjacent opponent to duel right now.');
+            return;
+        }
+
+        // Prioritize players who haven't played yet
+        const fresh = candidatePlayers.filter(pi => !state.players[pi].played);
+        const pool = fresh.length ? fresh : candidatePlayers;
+
+        // Pick a random player, then a random one of their valid tiles
+        const playerIdx = pool[Math.floor(Math.random() * pool.length)];
+        const tiles = tilesByPlayer.get(playerIdx);
+        const tileIdx = tiles[Math.floor(Math.random() * tiles.length)];
+
+        deselectAll();
+        selectTile(tileIdx);
+
+        const name = escapeHtml(state.players[playerIdx].name);
+        updateInstruction(`🎲 <strong>${name}</strong> was randomly selected as challenger. Click a blinking adjacent tile to duel.`);
     }
 
     /** Update the instruction text below the board */

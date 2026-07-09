@@ -594,6 +594,10 @@ img {
     border: 1px solid var(--border);
 }
 
+#btn-random-challenger {
+    margin-top: 14px;
+}
+
 /* ============================
    Modal
    ============================ */
